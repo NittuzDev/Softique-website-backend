@@ -3,7 +3,7 @@ credentials.json
 node_modules
 sessions
 .wwebjs_cache
-
+.dev.vars
 
 # Logs
 

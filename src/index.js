@@ -1,13 +1,14 @@
 import { Hono } from 'hono'
 import { google } from 'googleapis'
+import { env } from "cloudflare:workers";
 
 const app = new Hono()
 
-const CALENDAR_ID = "la_tua_email_personale@gmail.com"
+const CALENDAR_ID = "softique.beauty.nail@gmail.com"
 
 app.get('/test', async (c) => {
 
-  return  c.text('Hello Cloudflare Workers!')
+  return  c.text('Hello Cloudflare Workers!'+c.env.client_email)
 })
 
 
@@ -15,8 +16,8 @@ app.get('/api/slots-liberi', async (c) => {
   try {
     // 1. Recuperiamo i secrets dalle variabili d'ambiente di Cloudflare (c.env)
     // Assicurati che i nomi coincidano con quelli inseriti nei Secrets della dashboard
-    const clientEmail = c.env.CLIENT_EMAIL
-    let privateKey = c.env.PRIVATE_KEY
+    const clientEmail = c.env.client_email
+    let privateKey = c.env.private_key
 
     if (!clientEmail || !privateKey) {
       return c.json({ status: "error", message: "Configurazione dei Secrets mancante su Cloudflare" }, 500)
@@ -52,6 +53,8 @@ app.get('/api/slots-liberi', async (c) => {
         items: [{ id: CALENDAR_ID }]
       }
     })
+
+    console.log(response)
 
     const eventiOccupati = response.data.calendars[CALENDAR_ID].busy || []
     const risultato = []
