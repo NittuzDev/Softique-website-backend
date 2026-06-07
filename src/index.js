@@ -1,8 +1,12 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { google } from 'googleapis'
 import { env } from "cloudflare:workers";
 
+
 const app = new Hono()
+app.use('*', cors())
+//app.use('*', cors({ origin: 'https://softiquenail.it' }))
 
 const CALENDAR_ID = "softique.beauty.nail@gmail.com"
 
