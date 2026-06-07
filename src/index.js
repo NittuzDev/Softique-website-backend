@@ -1,34 +1,45 @@
 import { Hono } from 'hono'
 import { calendar } from '@googleapis/calendar'
-import { google } from 'googleapis' // Assicurati di importare 'google' per l'auth
-import credentials from './credentials.json' assert { type: 'json' } 
-// Nota: l'assert serve a Node/Cloudflare per capire che stai importando un file JSON fisicamente
+import { google } from 'googleapis'
 
 const app = new Hono()
 
 const CALENDAR_ID = "la_tua_email_personale@gmail.com"
 
-// Autenticazione Cloudflare-friendly usando l'oggetto JSON già importato
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: credentials.client_email,
-    private_key: credentials.private_key
-  },
-  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-})
-
-const googleCal = calendar({
-  version: 'v3',
-  auth: auth
-})
-
 app.get('/api/slots-liberi', async (c) => {
   try {
+    // 1. Recuperiamo i secrets dalle variabili d'ambiente di Cloudflare (c.env)
+    // Assicurati che i nomi coincidano con quelli inseriti nei Secrets della dashboard
+    const clientEmail = c.env.GOOGLE_CLIENT_EMAIL
+    let privateKey = c.env.GOOGLE_PRIVATE_KEY
+
+    if (!clientEmail || !privateKey) {
+      return c.json({ status: "error", message: "Configurazione dei Secrets mancante su Cloudflare" }, 500)
+    }
+
+    // Fix cruciale per i Secrets: i ritorni a capo (\n) inseriti come testo nelle textbox dei segreti
+    // spesso vengono letti come stringhe letterali. Questo rimpiazzo sistema la chiave.
+    privateKey = privateKey.replace(/\\n/g, '\n')
+
+    // 2. Inizializziamo l'autenticazione con i dati presi dai Secrets
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey
+      },
+      scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+    })
+
+    const googleCal = calendar({
+      version: 'v3',
+      auth: auth
+    })
+
+    // 3. Logica di recupero date (Prossimi 7 giorni)
     const oggi = new Date()
     const finePeriodo = new Date()
     finePeriodo.setDate(oggi.getDate() + 7)
 
-    // Interroghiamo Google FreeBusy
     const response = await googleCal.freebusy.query({
       requestBody: {
         timeMin: oggi.toISOString(),
