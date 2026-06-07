@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { calendar } from '@googleapis/calendar'
 import { google } from 'googleapis'
 
 const app = new Hono()
@@ -30,7 +29,7 @@ app.get('/api/slots-liberi', async (c) => {
       scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
     })
 
-    const googleCal = calendar({
+    const googleCal = google.calendar({
       version: 'v3',
       auth: auth
     })
