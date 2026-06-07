@@ -8,7 +8,7 @@ const CALENDAR_ID = "softique.beauty.nail@gmail.com"
 
 app.get('/test', async (c) => {
 
-  return  c.text('Hello Cloudflare Workers!'+c.env.client_email)
+  return  c.text('Hello Cloudflare Workers!')
 })
 
 
