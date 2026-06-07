@@ -7,7 +7,7 @@ const CALENDAR_ID = "la_tua_email_personale@gmail.com"
 
 app.get('/test', async (c) => {
 
-  return  c.json({a:env.client_email, b:c.env.client_email});
+  return  c.text('Hello Cloudflare Workers!')
 })
 
 
