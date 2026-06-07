@@ -5,6 +5,12 @@ const app = new Hono()
 
 const CALENDAR_ID = "la_tua_email_personale@gmail.com"
 
+app.get('/test', async (c) => {
+
+  return  (c.env.client_email);
+})
+
+
 app.get('/api/slots-liberi', async (c) => {
   try {
     // 1. Recuperiamo i secrets dalle variabili d'ambiente di Cloudflare (c.env)
