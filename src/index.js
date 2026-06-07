@@ -9,7 +9,7 @@ app.get('/', (c) => {
 
 // Prima API: Ritorna un testo semplice (GET /api/saluto)
 app.get('/api/saluto', (c) => {
-  return c.text('Ciao! Questa è la prima API di test.')
+  return c.text('Ciao! Questa è la prima API di test wewe.')
 })
 
 // Seconda API: Ritorna un oggetto JSON (GET /api/info)
