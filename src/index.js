@@ -1,26 +1,106 @@
 import { Hono } from 'hono'
+import { calendar } from '@googleapis/calendar'
+import { google } from 'googleapis' // Assicurati di importare 'google' per l'auth
+import credentials from './credentials.json' assert { type: 'json' } 
+// Nota: l'assert serve a Node/Cloudflare per capire che stai importando un file JSON fisicamente
 
 const app = new Hono()
 
-// Rotta principale (Hello World di base)
-app.get('/', (c) => {
-  return c.text('Hello Cloudflare Workers!')
+const CALENDAR_ID = "la_tua_email_personale@gmail.com"
+
+// Autenticazione Cloudflare-friendly usando l'oggetto JSON già importato
+const auth = new google.auth.GoogleAuth({
+  credentials: {
+    client_email: credentials.client_email,
+    private_key: credentials.private_key
+  },
+  scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
 })
 
-// Prima API: Ritorna un testo semplice (GET /api/saluto)
-app.get('/api/saluto', (c) => {
-  return c.text('Ciao! Questa è la prima API di test wewe.')
+const googleCal = calendar({
+  version: 'v3',
+  auth: auth
 })
 
-// Seconda API: Ritorna un oggetto JSON (GET /api/info)
-app.get('/api/info', (c) => {
-  const data = {
-    status: "success",
-    message: "Benvenuto nella seconda API!",
-    timestamp: new Date().toISOString(),
-    environment: "Cloudflare Worker"
+app.get('/api/slots-liberi', async (c) => {
+  try {
+    const oggi = new Date()
+    const finePeriodo = new Date()
+    finePeriodo.setDate(oggi.getDate() + 7)
+
+    // Interroghiamo Google FreeBusy
+    const response = await googleCal.freebusy.query({
+      requestBody: {
+        timeMin: oggi.toISOString(),
+        timeMax: finePeriodo.toISOString(),
+        items: [{ id: CALENDAR_ID }]
+      }
+    })
+
+    const eventiOccupati = response.data.calendars[CALENDAR_ID].busy || []
+    const risultato = []
+    const giorniDellaSettimana = ["domenica", "lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"]
+
+    for (let d = new Date(oggi); d <= finePeriodo; d.setDate(d.getDate() + 1)) {
+      const limiteInizio = new Date(d)
+      limiteInizio.setHours(9, 0, 0, 0)
+      
+      const limiteFine = new Date(d)
+      limiteFine.setHours(19, 0, 0, 0)
+
+      if (new Date() > limiteFine) continue
+
+      const inizioEffettivo = new Date() > limiteInizio ? new Date() : limiteInizio
+
+      const occupatiDelGiorno = eventiOccupati.filter(evento => {
+        const inizioEv = new Date(evento.start)
+        const fineEv = new Date(evento.end)
+        return inizioEv < limiteFine && fineEv > inizioEffettivo
+      }).sort((a, b) => new Date(a.start) - new Date(b.start))
+
+      const slotsLiberi = []
+      let oraCorrente = new Date(inizioEffettivo)
+
+      for (const blocco of occupatiDelGiorno) {
+        const inizioOccupato = new Date(blocco.start)
+        const fineOccupato = new Date(blocco.end)
+
+        if (inizioOccupato > oraCorrente) {
+          slotsLiberi.push({
+            inizio: formattaOra(oraCorrente),
+            fine: formattaOra(inizioOccupato)
+          })
+        }
+        if (fineOccupato > oraCorrente) {
+          oraCorrente = new Date(fineOccupato)
+        }
+      }
+
+      if (oraCorrente < limiteFine) {
+        slotsLiberi.push({
+          inizio: formattaOra(oraCorrente),
+          fine: formattaOra(limiteFine)
+        })
+      }
+
+      const dataFormattata = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+
+      risultato.push({
+        data: dataFormattata,
+        giorno: giorniDellaSettimana[d.getDay()],
+        slots: slotsLiberi
+      })
+    }
+
+    return c.json(risultato)
+
+  } catch (error) {
+    return c.json({ status: "error", message: error.message }, 500)
   }
-  return c.json(data)
 })
+
+function formattaOra(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
 
 export default app
