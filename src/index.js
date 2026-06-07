@@ -9,8 +9,8 @@ app.get('/api/slots-liberi', async (c) => {
   try {
     // 1. Recuperiamo i secrets dalle variabili d'ambiente di Cloudflare (c.env)
     // Assicurati che i nomi coincidano con quelli inseriti nei Secrets della dashboard
-    const clientEmail = c.env.GOOGLE_CLIENT_EMAIL
-    let privateKey = c.env.GOOGLE_PRIVATE_KEY
+    const clientEmail = c.env.CLIENT_EMAIL
+    let privateKey = c.env.PRIVATE_KEY
 
     if (!clientEmail || !privateKey) {
       return c.json({ status: "error", message: "Configurazione dei Secrets mancante su Cloudflare" }, 500)
